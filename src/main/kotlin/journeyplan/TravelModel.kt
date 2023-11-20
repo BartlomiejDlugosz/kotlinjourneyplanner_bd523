@@ -11,7 +11,7 @@ data class Line(val name: String) {
   override fun equals(other: Any?): Boolean = (other is Line) && this.name == other.name
 }
 
-data class Segment(val station1: Station, val station2: Station, val line: Line) {
-  override fun toString() = "$station1 - $station2 on the $line line."
+data class Segment(val station1: Station, val station2: Station, val line: Line, val minutes: Int) {
+  override fun toString() = "$station1 - $station2 on the $line line in $minutes minutes"
   override fun equals(other: Any?): Boolean = (other is Segment) && this.station1 == other.station1 && this.station2 == other.station2 && this.line == other.line
 }
