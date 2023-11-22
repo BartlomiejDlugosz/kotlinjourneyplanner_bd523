@@ -4,36 +4,38 @@ import kotlin.concurrent.thread
 import kotlin.system.measureTimeMillis
 
 val lines: List<String> = listOf(
-//  "central",
+//    "central",
     "circle",
     "district",
-//  "northern",
-//  "jubilee",
-//  "bakerloo",
-  "piccadilly",
-//  "metropolitan",
-  "victoria",
-//  "hammersmith-city",
-  "elizabeth"
+//    "northern",
+//    "jubilee",
+//    "bakerloo",
+    "piccadilly",
+//    "metropolitan",
+    "victoria",
+//    "hammersmith-city",
+//    "elizabeth"
 )
 
 // Add your code for the route planner in this file.
-class SubwayMap(val segments: List<Segment>) {
+data class SubwayMap(val segments: List<Segment>) {
     val hashmap: HashMap<Station, List<Segment>> = hashMapOf()
+    val cache: HashMap<Pair<Station, Station>, List<Route>> = hashMapOf()
+
     init {
 
         for (segment in segments) {
             hashmap[segment.station1] = hashmap[segment.station1]?.plus(segment) ?: listOf(segment)
         }
-//        println(hashmap)
     }
+
     fun routesFrom(origin: Station, destination: Station): List<Route> {
         val segmentsWeCanFollow = hashmap[origin] ?: emptyList()
-        val routesToDestination = mutableListOf<Route>()
+        val routesToDestination = mutableListOf<List<Route>>()
+        cache.clear()
 
         if (origin == destination) {
-            routesToDestination.add(Route(listOf()))
-            return routesToDestination
+            return listOf(Route(listOf()))
         }
 
         val threads = mutableListOf<Thread>()
@@ -42,14 +44,14 @@ class SubwayMap(val segments: List<Segment>) {
 //                println("WORKING ON THREAD $segment")
                 val currentRoutes =
                     routesFromHelper(segment.station2, destination, listOf(origin))
-                routesToDestination.addAll(currentRoutes.map { Route(listOf(segment) + it.segments) })
+                routesToDestination.add(currentRoutes.map { Route(listOf(segment) + it.segments) })
 //                println("FINISHED THREAD ${currentRoutes.map { Route(listOf(segment) + it.segments) }.size} ${segment}")
             }
             threads.add(t)
         }
 
         threads.forEach { it.join() }
-        return routesToDestination.distinct().filter { it.segments.last().station2 == destination }
+        return routesToDestination.flatten().distinct().filter { it.segments.last().station2 == destination }
     }
 
     fun routesFromHelper(
@@ -57,20 +59,27 @@ class SubwayMap(val segments: List<Segment>) {
         destination: Station,
         visitedStations: List<Station> = listOf(origin)
     ): List<Route> {
+        if (cache.containsKey(origin to destination)) {
+            return cache[origin to destination]!!
+        }
         val segmentsWeCanFollow = (hashmap[origin] ?: emptyList()).filter { it.station2 !in visitedStations }
-        val routesToDestination = mutableListOf<Route>()
+        val routesToDestination = mutableListOf<List<Route>>()
 
         if (origin == destination) {
-            routesToDestination.add(Route(listOf()))
-            return routesToDestination
+            return listOf(Route(listOf()))
         }
 
         for (segment in segmentsWeCanFollow) {
-            val currentRoutes = routesFromHelper(segment.station2, destination, (visitedStations + origin).distinct())
-            routesToDestination.addAll(currentRoutes.map { Route(listOf(segment) + it.segments) })
+            routesToDestination.add(
+                routesFromHelper(
+                    segment.station2,
+                    destination,
+                    visitedStations + origin
+                ).map { Route(listOf(segment) + it.segments) })
         }
-
-        return routesToDestination.distinct().filter { it.segments.last().station2 == destination }
+        val returnVal = routesToDestination.flatten().distinct().filter { it.segments.last().station2 == destination }
+        cache[origin to destination] = returnVal
+        return returnVal
     }
 }
 
@@ -78,18 +87,29 @@ data class Route(val segments: List<Segment>) {
     override fun toString(): String = segments.toString()
 
     override fun equals(other: Any?): Boolean = (other is Route) && this.segments == other.segments
+    override fun hashCode(): Int {
+        return segments.hashCode()
+    }
 }
 
 fun main() {
+    val map = londonUndergroundCustom()
+    println(map.segments.size)
+//    val map2 = map.copy()
+
+    println("STARTING")
     println(measureTimeMillis {
-        val paths = londonUndergroundCustom().routesFrom(Station("South Kensington"), Station("Victoria"))
-        println(paths.size)
+        val paths = map.routesFrom(Station("South Kensington"), Station("Victoria"))
+        println("No. Routes: ${paths.size}")
     })
 
-    println(measureTimeMillis {
-        val paths = londonUndergroundCustom().routesFromHelper(Station("South Kensington"), Station("Victoria"))
-        println(paths.size)
-    })
+//    println(measureTimeMillis {
+//        val paths = map2.routesFromHelper(Station("South Kensington"), Station("Victoria"))
+//        println("No. Routes: ${paths.size}")
+////        println(map.cache.size)
+//    })
+
+    println(map.cache.size)
 
 //    39974
 //    7149
