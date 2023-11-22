@@ -2,121 +2,89 @@ package journeyplan
 
 import java.lang.Math.toRadians
 import java.net.URL
+import java.util.Collections.newSetFromMap
+import java.util.concurrent.ConcurrentHashMap
+import javax.print.attribute.standard.Destination
 import kotlin.concurrent.thread
 import kotlin.math.*
 
 val lines: List<String> = listOf(
   "central",
   "circle",
-  "district",
-  "northern",
-  "jubilee",
-  "bakerloo",
+//  "district",
+//  "northern",
+//  "jubilee",
+//  "bakerloo",
   "piccadilly",
-  "metropolitan",
+//  "metropolitan",
   "victoria",
-  "hammersmith-city",
-  "elizabeth"
+//  "hammersmith-city",
+//  "elizabeth"
 )
 
 // Add your code for the route planner in this file.
 class SubwayMap(val segments: List<Segment>) {
-  fun routesFrom(origin: Station, destination: Station): List<Route>{
-    TODO()
-  }
-}
-class Route(val segments: List<Segment>)
 
-fun lookUpStationCode(stationCode: String, stations: String): String {
-  //  println(stations.substringAfter(stationCode))
-//  val stationInfo = URL("https://api.tfl.gov.uk/StopPoint/$stationCode?app_id=REDACTED&app_key=REDACTED").readText()
-//  val lat = stationInfo.substringAfterLast("lat\":").substringBefore(",")
-//  val lon = stationInfo.substringAfterLast("lon\":").substringBefore("}")
-//  println(stations.substringAfter(stationCode).substringAfter("lat\":").substringBefore(","))
-  return stations.substringAfter(stationCode).substringAfter("commonName\":\"").substringBefore("\"")
-    .substringBefore(" Underground Station")
-}
-
-fun getStationNames(line: String): String {
-  return URL("https://api.tfl.gov.uk/Line/$line/StopPoints?app_id=REDACTED&app_key=REDACTED").readText()
-}
-
-fun getStations(line: String): List<List<Pair<String, Pair<Double, Double>>>> {
-  val data =
-    URL("https://api.tfl.gov.uk/Line/$line/Route/Sequence/all?app_id=REDACTED&app_key=REDACTED").readText()
-  val orderedStations = data.substringAfter("orderedLineRoutes")
-  val listOfStations = orderedStations.split("},").map { x ->
-    x.substringAfter("naptanIds\":[\"").substringBefore("\"]").split("\",\"")
-  }
-
-  val stations = data.substringAfter("stations").substringBefore("orderedLineRoutes")
-  val newList: MutableList<MutableList<Pair<String, Pair<Double, Double>>>> = mutableListOf()
-
-  for (route in listOfStations) {
-    val tempList: MutableList<Pair<String, Pair<Double, Double>>> = mutableListOf()
-    for (station in route) {
-      val lat = stations.substringAfter(station).substringAfter("lat\":").substringBefore(",")
-      val lon = stations.substringAfter(station).substringAfter("lon\":").substringBefore("}")
-      tempList.add(Pair(station, Pair(lat.toDouble(), lon.toDouble())))
+  fun routesFrom(origin: Station, destination: Station): List<Route> {
+    val routes = mutableListOf<Route>()
+    if (origin == destination) {
+      routes.add(Route(listOf()))
+      return routes
     }
-    newList.add(tempList)
-  }
-
-  return newList
-}
-
-fun calculateTime(geo1: Pair<Double, Double>, geo2: Pair<Double, Double>): Int {
-  var (lat1, lon1) = geo1
-  var (lat2, lon2) = geo2
-  lat1 = toRadians(lat1)
-  lat2 = toRadians(lat2)
-  lon1 = toRadians(lon1)
-  lon2 = toRadians(lon2)
-
-  val dlon = lon2 - lon1
-  val dlat = lat2 - lat1
-
-  val a = sin(dlat / 2).pow(2.0) + cos(lat1) * cos(lat2) * sin(dlon / 2).pow(2.0)
-  val c = 2 * asin(sqrt(a))
-
-  return max(((c * 6371.0) / 0.5498592).roundToInt(), 1)
-}
-
-fun londonUnderground(): SubwayMap {
-  val segments: MutableList<Segment> = mutableListOf()
-
-  val threads: MutableList<Thread> = mutableListOf()
-
-  for (line in lines) {
-    val t = thread {
-      val routes = getStations(line)
-      val centralStations = getStationNames(line)
-
-
-      for (route in routes) {
-        val tempSegment: MutableList<Segment> = mutableListOf()
-        for (i in 0..<(route.size - 1)) {
-          tempSegment.add(
-            Segment(
-              Station(lookUpStationCode(route[i].first, centralStations)),
-              Station(lookUpStationCode(route[i + 1].first, centralStations)),
-              Line(line.capitalize()),
-              calculateTime(route[i].second, route[i + 1].second)
-            )
-          )
-        }
-        segments.addAll(tempSegment.distinct())
+    val directSegments = segments.filter{ it.station1 == origin }
+    if (directSegments.isEmpty()) return emptyList()
+    val threads = mutableListOf<Thread>()
+    for (segment in directSegments) {
+      val t = thread {
+        val currentRoutes = routesFromHelper(segment.station2, destination, listOf(origin))
+        if (currentRoutes.isNotEmpty()) routes.addAll(currentRoutes.map { Route(listOf(segment) + it.segments) })
       }
+      threads.add(t)
     }
-    threads.add(t)
+    threads.forEach{it.join()}
+    return routes
   }
-  threads.forEach { it.join() }
-  return SubwayMap(segments.distinct())
+  fun routesFromHelper(origin: Station, destination: Station, visitedStations: List<Station> = emptyList()): List<Route> {
+//    if (origin == destination) return emptyList()
+
+    var routes = mutableListOf<Route>()
+    if (origin == destination) {
+      // Create a route with a single segment if the origin is the destination
+      routes.add(Route(listOf()))
+      return routes
+    }
+    val directSegments = segments.filter{ it.station1 == origin && it.station2 !in visitedStations }
+    if (directSegments.isEmpty()) return emptyList()
+
+    for (segment in directSegments) {
+//      val currentRoute = mutableListOf<Segment>(segment)
+//      currentRoute.addAll(findRoute(segment.station2, destination, listOf(origin)))
+//      if (currentRoute.last().station2 == destination) routes.add(Route(currentRoute))
+      val currentRoutes = routesFromHelper(segment.station2, destination, visitedStations.plus(origin))//.map{ Route(listOf(segment) + it.segments) }
+      if (currentRoutes.isNotEmpty()) routes.addAll(currentRoutes.map{ Route(listOf(segment) + it.segments) })
+      routes = routes.distinct().toMutableList()
+      routes = routes.filter{ it.segments.last().station2 == destination }.toMutableList()
+//      routes.addAll(currentRoutes)
+    }
+
+    return routes
+  }
+}
+class Route(val segments: List<Segment>) {
+  override fun toString(): String = segments.toString()
 }
 
 fun main() {
-//  val centralStations = getStationNames("central")
-//    lookUpStationCode("940GZZLUEBY", centralStations)
 
-  londonUnderground()
+  val paths = londonUndergroundCustom().routesFrom(Station("South Kensington"), Station("Victoria"))
+//  val paths = londonUnderground().routesFrom(Station("Chesham"), Station("Charing Cross"))
+//  val paths = londonUnderground().segments.filter { it.station1 == Station("Charing Cross") || it.station2 == Station("Charing Cross")}
+  for (path in paths) {
+    println(path)
+  }
+
+//  val stations = londonUnderground()
+
+//  val route = listOf(Route(listOf(Segment(Station("North Acton"), Station("East Acton"), Line("Central"), 2), Segment(Station("East Acton"), Station("White City"), Line("Central"), 2))))
+//  println(route.map{ Route(listOf(Segment(Station("West Acton"), Station("North Acton"), Line("Central"), 2)) + it.segments) })
 }

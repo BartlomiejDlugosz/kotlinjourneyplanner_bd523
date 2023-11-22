@@ -7,7 +7,7 @@ data class Station(val name: String) {
 }
 
 data class Line(val name: String) {
-  override fun toString() = name
+  override fun toString() = "$name Line"
   override fun equals(other: Any?): Boolean = (other is Line) && this.name == other.name
 }
 
