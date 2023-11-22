@@ -1,10 +1,9 @@
 package journeyplan
 
- import org.junit.Test
- import kotlin.test.assertEquals
+import org.junit.Test
+import kotlin.test.assertEquals
 
 class RoutePlannerTest {
-
   val northernLine = Line("Northern")
   val victoriaLine = Line("Victoria")
   val centralLine = Line("Central")
@@ -48,41 +47,41 @@ class RoutePlannerTest {
         Segment(oxfordCircus, bondStreet, centralLine, 2)
       )
     )
-//
-//  @Test
-//  fun `can calculate number of changes`() {
-//    assertEquals(0, tufnellParkToHighgate.numChanges())
-//    assertEquals(1, highgateToOxfordCircus.numChanges())
-//    assertEquals(2, camdenToBondStreet.numChanges())
-//  }
-//
-//  @Test
-//  fun `can calculate total duration`() {
-//    assertEquals(6, tufnellParkToHighgate.duration())
-//    assertEquals(18, highgateToOxfordCircus.duration())
-//    assertEquals(11, camdenToBondStreet.duration())
-//  }
-//
-//  @Test
-//  fun `toString omits calling points`() {
-//    assertEquals(
-//      """
-//                Tufnell Park to Highgate - 6 minutes, 0 changes
-//                 - Tufnell Park to Highgate by Northern Line
-//      """.trimIndent(),
-//      tufnellParkToHighgate.toString()
-//    )
-//  }
-//
-//  @Test
-//  fun `toString shows changes`() {
-//    assertEquals(
-//      """
-//                Highgate to Oxford Circus - 18 minutes, 1 changes
-//                 - Highgate to Euston by Northern Line
-//                 - Euston to Oxford Circus by Victoria Line
-//      """.trimIndent(),
-//      highgateToOxfordCircus.toString()
-//    )
-//  }
+
+  @Test
+  fun `can calculate number of changes`() {
+    assertEquals(0, tufnellParkToHighgate.numChanges())
+    assertEquals(1, highgateToOxfordCircus.numChanges())
+    assertEquals(2, camdenToBondStreet.numChanges())
+  }
+
+  @Test
+  fun `can calculate total duration`() {
+    assertEquals(6, tufnellParkToHighgate.duration())
+    assertEquals(18, highgateToOxfordCircus.duration())
+    assertEquals(11, camdenToBondStreet.duration())
+  }
+
+  @Test
+  fun `toString omits calling points`() {
+    assertEquals(
+      """
+      Tufnell Park to Highgate - 6 minutes, 0 changes
+       - Tufnell Park to Highgate by Northern Line
+      """.trimIndent(),
+      tufnellParkToHighgate.toString()
+    )
+  }
+
+  @Test
+  fun `toString shows changes`() {
+    assertEquals(
+      """
+      Highgate to Oxford Circus - 18 minutes, 1 changes
+       - Highgate to Euston by Northern Line
+       - Euston to Oxford Circus by Victoria Line
+      """.trimIndent(),
+      highgateToOxfordCircus.toString()
+    )
+  }
 }

@@ -3,29 +3,37 @@ package journeyplan
 import java.net.URL
 import kotlin.concurrent.thread
 import kotlin.math.asin
-import kotlin.math.pow
-import kotlin.math.sin
-import kotlin.math.sqrt
 import kotlin.math.cos
 import kotlin.math.max
+import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlin.math.sin
+import kotlin.math.sqrt
 
-fun lookUpStationCode(stationCode: String, stations: String): String {
+fun lookUpStationCode(
+  stationCode: String,
+  stations: String
+): String {
   return stations.substringAfter(stationCode).substringAfter("commonName\":\"").substringBefore("\"")
     .substringBefore(" Underground Station")
 }
 
 fun getStationNames(line: String): String {
-  return URL("https://api.tfl.gov.uk/Line/$line/StopPoints?app_id=REDACTED&app_key=REDACTED").readText()
+  return URL(
+    "https://api.tfl.gov.uk/Line/$line/StopPoints?app_id=REDACTED&app_key=REDACTED"
+  ).readText()
 }
 
 fun getStations(line: String): List<List<Pair<String, Pair<Double, Double>>>> {
   val data =
-    URL("https://api.tfl.gov.uk/Line/$line/Route/Sequence/all?app_id=REDACTED&app_key=REDACTED").readText()
+    URL(
+      "https://api.tfl.gov.uk/Line/$line/Route/Sequence/all?app_id=REDACTED&app_key=REDACTED"
+    ).readText()
   val orderedStations = data.substringAfter("orderedLineRoutes")
-  val listOfStations = orderedStations.split("},").map { x ->
-    x.substringAfter("naptanIds\":[\"").substringBefore("\"]").split("\",\"")
-  }
+  val listOfStations =
+    orderedStations.split("},").map { x ->
+      x.substringAfter("naptanIds\":[\"").substringBefore("\"]").split("\",\"")
+    }
 
   val stations = data.substringAfter("stations").substringBefore("orderedLineRoutes")
   val newList: MutableList<MutableList<Pair<String, Pair<Double, Double>>>> = mutableListOf()
@@ -43,7 +51,10 @@ fun getStations(line: String): List<List<Pair<String, Pair<Double, Double>>>> {
   return newList
 }
 
-fun calculateTime(geo1: Pair<Double, Double>, geo2: Pair<Double, Double>): Int {
+fun calculateDistance(
+  geo1: Pair<Double, Double>,
+  geo2: Pair<Double, Double>
+): Double {
   var (lat1, lon1) = geo1
   var (lat2, lon2) = geo2
   lat1 = Math.toRadians(lat1)
@@ -57,8 +68,13 @@ fun calculateTime(geo1: Pair<Double, Double>, geo2: Pair<Double, Double>): Int {
   val a = sin(dlat / 2).pow(2.0) + cos(lat1) * cos(lat2) * sin(dlon / 2).pow(2.0)
   val c = 2 * asin(sqrt(a))
 
-  return max(((c * 6371.0) / 0.5498592).roundToInt(), 1)
+  return c * 6371.0
 }
+
+fun calculateTime(
+  geo1: Pair<Double, Double>,
+  geo2: Pair<Double, Double>
+): Int = max((calculateDistance(geo1, geo2) / 0.5498592).roundToInt(), 1)
 
 fun londonUndergroundCustom(): SubwayMap {
   val segments: MutableList<Segment> = mutableListOf()
@@ -66,26 +82,26 @@ fun londonUndergroundCustom(): SubwayMap {
   val threads: MutableList<Thread> = mutableListOf()
 
   for (line in lines) {
-    val t = thread {
-      val routes = getStations(line)
-      val centralStations = getStationNames(line)
+    val t =
+      thread {
+        val routes = getStations(line)
+        val centralStations = getStationNames(line)
 
-
-      for (route in routes) {
-        val tempSegment: MutableList<Segment> = mutableListOf()
-        for (i in 0..<(route.size - 1)) {
-          tempSegment.add(
-            Segment(
-              Station(lookUpStationCode(route[i].first, centralStations)),
-              Station(lookUpStationCode(route[i + 1].first, centralStations)),
-              Line(line.capitalize()),
-              calculateTime(route[i].second, route[i + 1].second)
+        for (route in routes) {
+          val tempSegment: MutableList<Segment> = mutableListOf()
+          for (i in 0..<(route.size - 1)) {
+            tempSegment.add(
+              Segment(
+                Station(lookUpStationCode(route[i].first, centralStations), route[i].second),
+                Station(lookUpStationCode(route[i + 1].first, centralStations), route[i + 1].second),
+                Line(line.capitalize()),
+                calculateTime(route[i].second, route[i + 1].second)
+              )
             )
-          )
+          }
+          segments.addAll(tempSegment.distinct())
         }
-        segments.addAll(tempSegment.distinct())
       }
-    }
     threads.add(t)
   }
   threads.forEach { it.join() }
