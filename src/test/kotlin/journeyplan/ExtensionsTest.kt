@@ -118,6 +118,7 @@ class ExtensionsTest {
     sloaneSquare.close()
 
     routes = map.routesFrom(southKensington, oxfordCircus)
+
     assertEquals(2, routes.size)
     println(routes)
 

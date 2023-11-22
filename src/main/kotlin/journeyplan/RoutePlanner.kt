@@ -29,7 +29,8 @@ data class SubwayMap(private val segments: List<Segment>) {
     }
   }
 
-  fun getStationByName(stationName: String): Station = segments.find { it.from.name == stationName }?.from ?: Station(stationName)
+  fun getStationByName(stationName: String): Station =
+    segments.find { it.from.name == stationName }?.from ?: Station(stationName)
 
   fun routesFrom(
     origin: Station,
@@ -57,10 +58,12 @@ data class SubwayMap(private val segments: List<Segment>) {
       .filter {
         it.segments.last().to == destination &&
           it.segments.none { it.line.suspended } &&
-          it.segments.filterIndexed { index, segment ->
-            val next = segments.getOrNull(index + 1)
-            next != null && segment.line != next.line && !segment.to.opened
-          }.isEmpty()
+        it.segments.filterIndexed { index, segment ->
+          val next = it.segments.getOrNull(index + 1)
+
+          segment.line != next?.line && !segment.to.opened
+        }.isEmpty()
+
       }
       .sortedBy { optimisingFor(it) }
   }
