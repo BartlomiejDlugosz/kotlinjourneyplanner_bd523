@@ -1,130 +1,138 @@
 package journeyplan
 
-import kotlin.concurrent.thread
+import java.util.*
+import kotlin.collections.HashMap
 import kotlin.system.measureTimeMillis
 
-val lines: List<String> = listOf(
-//    "central",
+val lines: List<String> =
+  listOf(
+    "central",
     "circle",
     "district",
-//    "northern",
-//    "jubilee",
-//    "bakerloo",
+    "northern",
+    "jubilee",
+    "bakerloo",
     "piccadilly",
-//    "metropolitan",
+    "metropolitan",
     "victoria",
-//    "hammersmith-city",
-//    "elizabeth"
-)
+    "hammersmith-city",
+    "elizabeth"
+  )
 
 // Add your code for the route planner in this file.
-data class SubwayMap(val segments: List<Segment>) {
-    val hashmap: HashMap<Station, List<Segment>> = hashMapOf()
-    val cache: HashMap<Pair<Station, Station>, List<Route>> = hashMapOf()
+data class SubwayMap(private val segments: List<Segment>) {
+  private val hashmap: HashMap<Station, List<Segment>> = hashMapOf()
 
-    init {
+  init {
+    for (segment in segments) {
+      hashmap[segment.from] = hashmap.getOrDefault(segment.from, emptyList()) + segment
+    }
+  }
 
-        for (segment in segments) {
-            hashmap[segment.station1] = hashmap[segment.station1]?.plus(segment) ?: listOf(segment)
-        }
+  fun getStationByName(stationName: String): Station = segments.find { it.from.name == stationName }?.from ?: Station(stationName)
+
+  fun routesFrom(
+    origin: Station,
+    destination: Station,
+    visitedStations: List<Station> = listOf(origin),
+    optimisingFor: (Route) -> Int = Route::duration
+  ): List<Route> {
+    val segmentsWeCanFollow = (hashmap[origin] ?: emptyList()).filter { it.to !in visitedStations }
+    val routesToDestination = mutableListOf<List<Route>>()
+
+    if (origin == destination) return listOf(Route(listOf()))
+
+    for (segment in segmentsWeCanFollow) {
+      routesToDestination.add(
+        routesFrom(
+          segment.to,
+          destination,
+          visitedStations + origin
+        ).map { Route(listOf(segment) + it.segments) }
+      )
     }
 
-    fun routesFrom(origin: Station, destination: Station): List<Route> {
-        val segmentsWeCanFollow = hashmap[origin] ?: emptyList()
-        val routesToDestination = mutableListOf<List<Route>>()
-        cache.clear()
+    return routesToDestination
+      .flatten()
+      .filter {
+        it.segments.last().to == destination &&
+          it.segments.none { it.line.suspended } &&
+          it.segments.filterIndexed { index, segment ->
+            val next = segments.getOrNull(index + 1)
+            next != null && segment.line != next.line && !segment.to.opened
+          }.isEmpty()
+      }
+      .sortedBy { optimisingFor(it) }
+  }
 
-        if (origin == destination) {
-            return listOf(Route(listOf()))
+  fun findShortest(
+    origin: Station,
+    destination: Station
+  ): Route? {
+    data class Node(var segment: Segment, var metric: Double, var lastNode: Node? = null) {
+      fun route(): Route {
+        var current: Node? = this
+        val path = mutableListOf<Segment>()
+
+        while (current!!.lastNode != null) {
+          path.add(0, current.segment)
+          current = current.lastNode
         }
+        path.add(0, current.segment)
 
-        val threads = mutableListOf<Thread>()
-        for (segment in segmentsWeCanFollow) {
-            val t = thread {
-//                println("WORKING ON THREAD $segment")
-                val currentRoutes =
-                    routesFromHelper(segment.station2, destination, listOf(origin))
-                routesToDestination.add(currentRoutes.map { Route(listOf(segment) + it.segments) })
-//                println("FINISHED THREAD ${currentRoutes.map { Route(listOf(segment) + it.segments) }.size} ${segment}")
-            }
-            threads.add(t)
-        }
-
-        threads.forEach { it.join() }
-        return routesToDestination.flatten().distinct().filter { it.segments.last().station2 == destination }
+        return Route(path)
+      }
     }
 
-    fun routesFromHelper(
-        origin: Station,
-        destination: Station,
-        visitedStations: List<Station> = listOf(origin)
-    ): List<Route> {
-        if (cache.containsKey(origin to destination)) {
-            return cache[origin to destination]!!
-        }
-        val segmentsWeCanFollow = (hashmap[origin] ?: emptyList()).filter { it.station2 !in visitedStations }
-        val routesToDestination = mutableListOf<List<Route>>()
+    if (origin == destination) return null
 
-        if (origin == destination) {
-            return listOf(Route(listOf()))
-        }
+    val nodes = PriorityQueue<Node>(compareBy<Node> { it.metric }.thenBy { it.segment.line.name })
+    val visitedStations: MutableList<Station> = mutableListOf()
 
-        for (segment in segmentsWeCanFollow) {
-            routesToDestination.add(
-                routesFromHelper(
-                    segment.station2,
-                    destination,
-                    visitedStations + origin
-                ).map { Route(listOf(segment) + it.segments) })
-        }
-        val returnVal = routesToDestination.flatten().distinct().filter { it.segments.last().station2 == destination }
-        cache[origin to destination] = returnVal
-        return returnVal
+    val fromOrigin = (hashmap[origin] ?: emptyList())
+
+    for (segment in fromOrigin) {
+      val metric = calculateDistance(segment.to.geo, destination.geo) * 10 + segment.minutes.toDouble()
+      nodes.add(Node(segment, metric))
     }
-}
 
-data class Route(val segments: List<Segment>) {
-    override fun toString(): String = segments.toString()
+    var currentNode = nodes.peek()
+    while (currentNode.segment.to != destination) {
+      val fromNextNode = (hashmap[currentNode.segment.to] ?: emptyList()).filter { it.from !in visitedStations }
 
-    override fun equals(other: Any?): Boolean = (other is Route) && this.segments == other.segments
-    override fun hashCode(): Int {
-        return segments.hashCode()
+      for (segment in fromNextNode) {
+        val metric =
+          currentNode.metric + calculateDistance(segment.to.geo, destination.geo) + segment.minutes.toDouble()
+        val exists = nodes.find { it.segment == segment }
+        if (exists != null) {
+          if (exists.metric > metric) nodes.remove(exists)
+        } else {
+          val newNode = Node(segment, metric, currentNode)
+          nodes.add(newNode)
+        }
+      }
+      visitedStations.add(currentNode.segment.from)
+      nodes.remove()
+      if (nodes.isEmpty()) return null
+      currentNode = nodes.peek()
     }
+
+    return currentNode.route()
+  }
 }
 
 fun main() {
-    val map = londonUndergroundCustom()
-    println(map.segments.size)
-//    val map2 = map.copy()
+  val map = londonUndergroundCustom()
 
-    println("STARTING")
-    println(measureTimeMillis {
-        val paths = map.routesFrom(Station("South Kensington"), Station("Victoria"))
-        println("No. Routes: ${paths.size}")
-    })
-
-//    println(measureTimeMillis {
-//        val paths = map2.routesFromHelper(Station("South Kensington"), Station("Victoria"))
-//        println("No. Routes: ${paths.size}")
-////        println(map.cache.size)
-//    })
-
-    println(map.cache.size)
-
-//    39974
-//    7149
-//    39974
-//    13861
-
-//  val paths = londonUnderground().routesFrom(Station("Chesham"), Station("Charing Cross"))
-//  val paths = londonUnderground().segments.filter { it.station1 == Station("Charing Cross") || it.station2 == Station("Charing Cross")}
-
-//    paths.forEach { route ->
-//        println(route)
-//    }
-
-//  val stations = londonUnderground()
-
-//  val route = listOf(Route(listOf(Segment(Station("North Acton"), Station("East Acton"), Line("Central"), 2), Segment(Station("East Acton"), Station("White City"), Line("Central"), 2))))
-//  println(route.map{ Route(listOf(Segment(Station("West Acton"), Station("North Acton"), Line("Central"), 2)) + it.segments) })
+  println("STARTING")
+  println(
+    measureTimeMillis {
+      val paths =
+        map.findShortest(
+          map.getStationByName("Whitechapel"),
+          map.getStationByName("North Acton")
+        )
+      println(paths)
+    }
+  )
 }

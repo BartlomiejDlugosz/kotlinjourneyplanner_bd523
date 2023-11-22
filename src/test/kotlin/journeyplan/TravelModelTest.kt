@@ -1,10 +1,9 @@
 package journeyplan
 
- import org.junit.Test
- import kotlin.test.assertEquals
+import org.junit.Test
+import kotlin.test.assertEquals
 
 class TravelModelTest {
-
   @Test
   fun `printing stations shows their names`() {
     assertEquals("South Kensington", Station("South Kensington").toString())
