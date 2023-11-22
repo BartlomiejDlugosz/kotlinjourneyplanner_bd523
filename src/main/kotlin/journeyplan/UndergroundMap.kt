@@ -2,7 +2,13 @@ package journeyplan
 
 import java.net.URL
 import kotlin.concurrent.thread
-import kotlin.math.*
+import kotlin.math.asin
+import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
+import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.roundToInt
 
 fun lookUpStationCode(stationCode: String, stations: String): String {
   return stations.substringAfter(stationCode).substringAfter("commonName\":\"").substringBefore("\"")
