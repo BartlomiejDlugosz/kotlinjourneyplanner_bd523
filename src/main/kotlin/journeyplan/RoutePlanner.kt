@@ -58,11 +58,8 @@ data class SubwayMap(private val segments: List<Segment>) {
       .filter {
         it.segments.last().to == destination &&
           it.segments.none { it.line.suspended } &&
-        it.segments.filterIndexed { index, segment ->
-          val next = it.segments.getOrNull(index + 1)
-
-          segment.line != next?.line && !segment.to.opened
-        }.isEmpty()
+          it.segments.filterIndexed { index, segment -> segment.line != it.segments.getOrNull(index + 1)?.line && !segment.to.opened }
+            .isEmpty()
 
       }
       .sortedBy { optimisingFor(it) }
