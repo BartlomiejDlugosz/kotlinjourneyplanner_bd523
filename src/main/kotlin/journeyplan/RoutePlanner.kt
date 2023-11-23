@@ -54,11 +54,6 @@ data class SubwayMap(private val segments: List<Segment>) {
         it.segments.last().to == destination &&
           it.segments.none { it.line.suspended } &&
           it.segments.filterIndexed { index, segment ->
-            // If the current line and the next line
-            // are different
-            // and the station in between is closed
-            // return that item
-            // and then check if empty for valid routes
             segment.line !=
               it.segments.getOrNull(index + 1)
                 ?.line && !segment.to.opened
@@ -157,7 +152,7 @@ data class SubwayMap(private val segments: List<Segment>) {
         (
           hashmap[currentNode.segment.to]
             ?: emptyList()
-        ).filter { it.from !in visitedStations }
+          ).filter { it.from !in visitedStations }
 
       // Go over segments and update their node if the metric is lower
       fromNextNode.forEach { segment ->
