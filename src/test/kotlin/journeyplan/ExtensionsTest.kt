@@ -126,7 +126,7 @@ class ExtensionsTest {
   }
 
   @Test
-  fun `can find shortest route`() {
+  fun `A* can find shortest route`() {
 
     val route = map.findShortest(southKensington, victoria)
 
@@ -134,7 +134,7 @@ class ExtensionsTest {
   }
 
   @Test
-  fun `can find shortest route with distance`() {
+  fun `A* can find shortest route with distance`() {
     val map = londonUnderground()
     val route = map.findShortest(map.getStationByName("South Kensington"), map.getStationByName("Victoria"), useDistance = true)
 
@@ -143,7 +143,7 @@ class ExtensionsTest {
   }
 
   @Test
-  fun `can find shortest route with distance and closed stations`() {
+  fun `A* can find shortest route with distance and closed stations`() {
     val map = londonUnderground()
     val route = map.findShortest(map.getStationByName("South Kensington"), map.getStationByName("Victoria"), useDistance = true)
     assertEquals(12, route?.duration())
@@ -155,12 +155,15 @@ class ExtensionsTest {
   }
 
   @Test
-  fun `can find shortest route with distance and closed stations2`() {
+  fun `A* can find shortest route with distance and closed stations2`() {
     val map = londonUnderground()
+
     val route = map.findShortest(map.getStationByName("North Acton"), map.getStationByName("Paddington"), useDistance = true)
     assertEquals(13, route?.duration())
     assertEquals(1, route?.numChanges())
+
     map.getStationByName("Notting Hill Gate").close()
+
     val route2 = map.findShortest(map.getStationByName("North Acton"), map.getStationByName("Paddington"), useDistance = true)
     assertEquals(12, route2?.duration())
     assertEquals(1, route2?.numChanges())
