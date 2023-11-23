@@ -154,17 +154,17 @@ class ExtensionsTest {
     assertEquals(2, route2?.segments?.size)
   }
 
-//  @Test
-//  fun `can find shortest route with distance and closed stations2`() {
-//    val map = londonUnderground()
-//    val route = map.findShortest(map.getStationByName("North Acton"), map.getStationByName("Paddington"), useDistance = true)
-//    assertEquals(13, route?.duration())
-//    assertEquals(1, route?.numChanges())
-//    map.getStationByName("Notting Hill Gate").close()
-//    val route2 = map.findShortest(map.getStationByName("North Acton"), map.getStationByName("Paddington"), useDistance = true)
-//    assertEquals(12, route2?.duration())
-//    assertEquals(1, route2?.numChanges())
-//  }
+  @Test
+  fun `can find shortest route with distance and closed stations2`() {
+    val map = londonUnderground()
+    val route = map.findShortest(map.getStationByName("North Acton"), map.getStationByName("Paddington"), useDistance = true)
+    assertEquals(13, route?.duration())
+    assertEquals(1, route?.numChanges())
+    map.getStationByName("Notting Hill Gate").close()
+    val route2 = map.findShortest(map.getStationByName("North Acton"), map.getStationByName("Paddington"), useDistance = true)
+    assertEquals(12, route2?.duration())
+    assertEquals(1, route2?.numChanges())
+  }
 
   private fun assertGoesVia(
     station: Station,
