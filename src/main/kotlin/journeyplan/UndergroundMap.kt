@@ -34,7 +34,9 @@ fun lookUpStationCode(
   stationCode: String,
   stations: String
 ): String {
-  return stations.substringAfter(stationCode).substringAfter("commonName\":\"").substringBefore("\"")
+  return stations.substringAfter(stationCode)
+    .substringAfter("commonName\":\"")
+    .substringBefore("\"")
     .substringBefore(" Underground Station")
 }
 
@@ -42,8 +44,8 @@ fun lookUpStationCode(
 fun getStationNames(line: String): String {
   return URL(
     "https://api.tfl.gov.uk/Line/$line/StopPoints?" +
-            "app_id=$tflAppId&" +
-            "app_key=$tflAppKey"
+      "app_id=$tflAppId&" +
+      "app_key=$tflAppKey"
   ).readText()
 }
 
@@ -54,8 +56,8 @@ fun getStations(line: String): List<List<Pair<String, geoCoordinate>>> {
   val data =
     URL(
       "https://api.tfl.gov.uk/Line/$line/Route/Sequence/all?" +
-              "app_id=$tflAppId&" +
-              "app_key=$tflAppKey"
+        "app_id=$tflAppId&" +
+        "app_key=$tflAppKey"
     ).readText()
   val orderedStations = data.substringAfter("orderedLineRoutes")
   val listOfStations =
@@ -65,8 +67,9 @@ fun getStations(line: String): List<List<Pair<String, geoCoordinate>>> {
         .split("\",\"")
     }
 
-  val stations = data.substringAfter("stations")
-    .substringBefore("orderedLineRoutes")
+  val stations =
+    data.substringAfter("stations")
+      .substringBefore("orderedLineRoutes")
   val listOfRoutes: MutableList<List<Pair<String, Pair<Double, Double>>>> =
     mutableListOf()
 
@@ -74,12 +77,14 @@ fun getStations(line: String): List<List<Pair<String, geoCoordinate>>> {
     val currentRoute: MutableList<Pair<String, Pair<Double, Double>>> =
       mutableListOf()
     for (station in route) {
-      val lat = stations.substringAfter(station)
-        .substringAfter("lat\":")
-        .substringBefore(",")
-      val lon = stations.substringAfter(station)
-        .substringAfter("lon\":")
-        .substringBefore("}")
+      val lat =
+        stations.substringAfter(station)
+          .substringAfter("lat\":")
+          .substringBefore(",")
+      val lon =
+        stations.substringAfter(station)
+          .substringAfter("lon\":")
+          .substringBefore("}")
       currentRoute.add(Pair(station, Pair(lat.toDouble(), lon.toDouble())))
     }
     listOfRoutes.add(currentRoute)
@@ -103,9 +108,10 @@ fun calculateDistance(
   val dlon = lon2 - lon1
   val dlat = lat2 - lat1
 
-  val a = sin(dlat / 2).pow(2.0) +
-          cos(lat1) * cos(lat2) *
-          sin(dlon / 2).pow(2.0)
+  val a =
+    sin(dlat / 2).pow(2.0) +
+      cos(lat1) * cos(lat2) *
+      sin(dlon / 2).pow(2.0)
   val c = 2 * asin(sqrt(a))
 
   return c * 6371.0
@@ -142,7 +148,8 @@ fun londonUnderground(): SubwayMap {
                   route[i].second
                 ),
                 Station(
-                  lookUpStationCode(route[i + 1].first, stationNames), route[i + 1].second
+                  lookUpStationCode(route[i + 1].first, stationNames),
+                  route[i + 1].second
                 ),
                 Line(line.capitalize()),
                 calculateTime(route[i].second, route[i + 1].second)

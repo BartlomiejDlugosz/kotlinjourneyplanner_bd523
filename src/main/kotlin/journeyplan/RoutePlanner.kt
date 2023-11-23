@@ -33,7 +33,7 @@ data class SubwayMap(private val segments: List<Segment>) {
     // Terminate if we've reached destination
     if (origin == destination) return listOf(Route(listOf()))
 
-    for (segment in segmentsWeCanFollow) {
+    segmentsWeCanFollow.forEach { segment ->
       // Add all the routes from the next station to the destination
       // and prepend the current segment
       routesToDestination.add(
@@ -103,6 +103,19 @@ data class SubwayMap(private val segments: List<Segment>) {
       }
     }
 
+    fun costFunction(segment: Segment, destination: Station, previousSegment: Segment? = null): Double =
+      when (useDistance) {
+        true -> calculateDistance(segment.to.geo, destination.geo) -
+                calculateDistance(
+                  segment.to.geo,
+                  destination.geo
+                )
+        else -> 0.0
+      } + when (segment.line != previousSegment?.line) {
+        true -> 10.0
+        else -> 0.0
+      } + segment.minutes.toDouble()
+
     // Terminate if we've reached destination
     if (origin == destination) return null
 
@@ -114,19 +127,14 @@ data class SubwayMap(private val segments: List<Segment>) {
 
     // Initialise all the nodes with either the metric from the origin
     // or a large number otherwise
-    for (segment in segments) {
+    segments.forEach { segment ->
       nodes.add(
         Node(
           segment,
-          if (segment.from == origin)
-            (if (useDistance)
-              calculateDistance(segment.to.geo, destination.geo) - calculateDistance(
-                segment.to.geo,
-                destination.geo
-              )
-            else 0.0) + segment.minutes.toDouble()
-          else
-            Double.POSITIVE_INFINITY
+          when (segment.from) {
+            origin -> costFunction(segment, destination)
+            else -> Double.POSITIVE_INFINITY
+          }
         )
       )
     }
@@ -146,16 +154,9 @@ data class SubwayMap(private val segments: List<Segment>) {
                 ).filter { it.from !in visitedStations }
 
       // Go over segments and update their node if the metric is lower
-      for (segment in fromNextNode) {
-        var metric =
-          currentNode.metric +
-                  (if (useDistance)
-                    calculateDistance(segment.to.geo, destination.geo) - calculateDistance(
-                      currentNode.segment.to.geo,
-                      destination.geo
-                    )
-                  else 0.0) + segment.minutes.toDouble()
-        if (segment.line != currentNode.segment.line) metric += 10
+      fromNextNode.forEach { segment ->
+        var metric = currentNode.metric + costFunction(segment, destination)
+
         val segmentNode = nodes.find { it.segment == segment }
         if (segmentNode != null && segmentNode.metric > metric) {
           // Remove the node and add it back with the updated metric
@@ -180,7 +181,7 @@ data class SubwayMap(private val segments: List<Segment>) {
 fun main() {
   val map = londonUnderground()
   println("STARTING")
-  map.getStationByName("Paddington").close()
+//  map.getStationByName("Notting Hill Gate").close()
 
   val paths =
     map.findShortest(
