@@ -54,9 +54,8 @@ data class SubwayMap(private val segments: List<Segment>) {
         it.segments.last().to == destination &&
           it.segments.none { it.line.suspended } &&
           it.segments.filterIndexed { index, segment ->
-            segment.line !=
-              it.segments.getOrNull(index + 1)
-                ?.line && !segment.to.opened
+            segment.line != it.segments.getOrNull(index + 1)?.line &&
+              !segment.to.opened
           }.isEmpty()
       }
       .sortedBy { optimisingFor(it) }
@@ -66,7 +65,7 @@ data class SubwayMap(private val segments: List<Segment>) {
     origin: Station,
     destination: Station,
     useDistance: Boolean = false
-  ): Route? {
+  ): Route {
     data class Node(
       var segment: Segment,
       var metric: Double,
@@ -117,8 +116,8 @@ data class SubwayMap(private val segments: List<Segment>) {
           else -> 0.0
         } + segment.minutes.toDouble()
 
-    // Terminate if we've reached destination
-    if (origin == destination) return null
+    // Terminate if we're already at destination
+    if (origin == destination) return Route(emptyList())
 
     // Holds all the nodes in an ordered queue
     val nodes =
@@ -149,14 +148,12 @@ data class SubwayMap(private val segments: List<Segment>) {
       // Get all the segments from the next node
       // and filter out the visited stations
       val fromNextNode =
-        (
-          hashmap[currentNode.segment.to]
-            ?: emptyList()
-          ).filter { it.from !in visitedStations }
+        (hashmap[currentNode.segment.to] ?: emptyList())
+          .filter { it.from !in visitedStations }
 
       // Go over segments and update their node if the metric is lower
       fromNextNode.forEach { segment ->
-        var metric = currentNode.metric + costFunction(segment, destination)
+        val metric = currentNode.metric + costFunction(segment, destination)
 
         val segmentNode = nodes.find { it.segment == segment }
         if (segmentNode != null && segmentNode.metric > metric) {
@@ -169,9 +166,9 @@ data class SubwayMap(private val segments: List<Segment>) {
       }
       // Add the current station to the visited stations
       visitedStations.add(currentNode.segment.from)
-      if (nodes.isEmpty()) return null
       // Remove the current node and get the next one
       nodes.remove()
+      if (nodes.isEmpty()) return Route(emptyList())
       currentNode = nodes.peek()
     }
     // Return the reconstructed route
@@ -187,7 +184,7 @@ fun main() {
   val paths =
     map.findShortest(
       map.getStationByName("North Acton"),
-      map.getStationByName("Paddington"),
+      map.getStationByName("North Acton"),
       true
     )
   println(paths)

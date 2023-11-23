@@ -74,6 +74,7 @@ data class Segment(
 
 data class Route(val segments: List<Segment>) {
   override fun toString(): String {
+    if (segments.isEmpty()) return "No routes available"
     val str =
       StringBuilder(
         "${segments.first().from} to ${segments.last().to} " +
