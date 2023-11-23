@@ -125,21 +125,62 @@ class ExtensionsTest {
     assertGoesVia(sloaneSquare, routes[1])
   }
 
-  fun assertGoesVia(
+  @Test
+  fun `can find shortest route`() {
+
+    val route = map.findShortest(southKensington, victoria)
+
+    assertEquals(12, route?.duration())
+  }
+
+  @Test
+  fun `can find shortest route with distance`() {
+    val map = londonUnderground()
+    val route = map.findShortest(map.getStationByName("South Kensington"), map.getStationByName("Victoria"), useDistance = true)
+
+    assertEquals(12, route?.duration())
+    assertEquals(2, route?.segments?.size)
+  }
+
+  @Test
+  fun `can find shortest route with distance and closed stations`() {
+    val map = londonUnderground()
+    val route = map.findShortest(map.getStationByName("South Kensington"), map.getStationByName("Victoria"), useDistance = true)
+    assertEquals(12, route?.duration())
+    assertEquals(2, route?.segments?.size)
+    map.getStationByName("Sloane Square").close()
+    val route2 = map.findShortest(map.getStationByName("South Kensington"), map.getStationByName("Victoria"), useDistance = true)
+    assertEquals(12, route2?.duration())
+    assertEquals(2, route2?.segments?.size)
+  }
+
+//  @Test
+//  fun `can find shortest route with distance and closed stations2`() {
+//    val map = londonUnderground()
+//    val route = map.findShortest(map.getStationByName("North Acton"), map.getStationByName("Paddington"), useDistance = true)
+//    assertEquals(13, route?.duration())
+//    assertEquals(1, route?.numChanges())
+//    map.getStationByName("Notting Hill Gate").close()
+//    val route2 = map.findShortest(map.getStationByName("North Acton"), map.getStationByName("Paddington"), useDistance = true)
+//    assertEquals(12, route2?.duration())
+//    assertEquals(1, route2?.numChanges())
+//  }
+
+  private fun assertGoesVia(
     station: Station,
     route: Route
   ) {
     assertNotNull(findIn(route, station))
   }
 
-  fun assertDoesNotGoVia(
+  private fun assertDoesNotGoVia(
     station: Station,
     route: Route
   ) {
     assertNull(findIn(route, station))
   }
 
-  fun findIn(
+  private fun findIn(
     route: Route,
     station: Station
   ) = route.segments.find { s -> s.to == station }
