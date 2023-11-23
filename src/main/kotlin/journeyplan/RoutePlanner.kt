@@ -2,22 +2,6 @@ package journeyplan
 
 import java.util.*
 import kotlin.collections.HashMap
-import kotlin.system.measureTimeMillis
-
-val lines: List<String> =
-  listOf(
-    "central",
-    "circle",
-    "district",
-    "northern",
-    "jubilee",
-    "bakerloo",
-    "piccadilly",
-    "metropolitan",
-    "victoria",
-    "hammersmith-city",
-    "elizabeth"
-  )
 
 // Add your code for the route planner in this file.
 data class SubwayMap(private val segments: List<Segment>) {
@@ -25,12 +9,14 @@ data class SubwayMap(private val segments: List<Segment>) {
 
   init {
     for (segment in segments) {
-      hashmap[segment.from] = hashmap.getOrDefault(segment.from, emptyList()) + segment
+      hashmap[segment.from] =
+        hashmap.getOrDefault(segment.from, emptyList()) + segment
     }
   }
 
   fun getStationByName(stationName: String): Station =
-    segments.find { it.from.name == stationName }?.from ?: Station(stationName)
+    segments.find { it.from.name == stationName }?.from
+      ?: Station(stationName)
 
   fun routesFrom(
     origin: Station,
@@ -38,12 +24,18 @@ data class SubwayMap(private val segments: List<Segment>) {
     visitedStations: List<Station> = listOf(origin),
     optimisingFor: (Route) -> Int = Route::duration
   ): List<Route> {
-    val segmentsWeCanFollow = (hashmap[origin] ?: emptyList()).filter { it.to !in visitedStations }
+    // Get all the segments we can follow from the origin
+    val segmentsWeCanFollow =
+      (hashmap[origin] ?: emptyList())
+        .filter { it.to !in visitedStations }
     val routesToDestination = mutableListOf<List<Route>>()
 
+    // Terminate if we've reached destination
     if (origin == destination) return listOf(Route(listOf()))
 
     for (segment in segmentsWeCanFollow) {
+      // Add all the routes from the next station to the destination
+      // and prepend the current segment
       routesToDestination.add(
         routesFrom(
           segment.to,
@@ -53,23 +45,39 @@ data class SubwayMap(private val segments: List<Segment>) {
       )
     }
 
+    // Return flattened list of routes to destination, filtered for
+    // suspended lines and closed stations
+    // and sorted by the optimising function
     return routesToDestination
       .flatten()
       .filter {
         it.segments.last().to == destination &&
-          it.segments.none { it.line.suspended } &&
-          it.segments.filterIndexed { index, segment -> segment.line != it.segments.getOrNull(index + 1)?.line && !segment.to.opened }
-            .isEmpty()
-
+                it.segments.none { it.line.suspended } &&
+                it.segments.filterIndexed { index, segment ->
+                  // If the current line and the next line
+                  // are different
+                  // and the station in between is closed
+                  // return that item
+                  // and then check if empty for valid routes
+                  segment.line !=
+                          it.segments.getOrNull(index + 1)
+                            ?.line && !segment.to.opened
+                }.isEmpty()
       }
       .sortedBy { optimisingFor(it) }
   }
 
   fun findShortest(
     origin: Station,
-    destination: Station
+    destination: Station,
+    useDistance: Boolean = false
   ): Route? {
-    data class Node(var segment: Segment, var metric: Double, var lastNode: Node? = null) {
+    data class Node(
+      var segment: Segment,
+      var metric: Double,
+      var lastNode: Node? = null
+    ) {
+      // Reconstruct route from last nodes
       fun route(): Route {
         var current: Node? = this
         val path = mutableListOf<Segment>()
@@ -82,57 +90,103 @@ data class SubwayMap(private val segments: List<Segment>) {
 
         return Route(path)
       }
+
+      // Update the node
+      fun update(
+        segment: Segment,
+        metric: Double,
+        lastNode: Node? = null
+      ) {
+        this.segment = segment
+        this.metric = metric
+        this.lastNode = lastNode
+      }
     }
 
+    // Terminate if we've reached destination
     if (origin == destination) return null
 
-    val nodes = PriorityQueue<Node>(compareBy<Node> { it.metric }.thenBy { it.segment.line.name })
-    val visitedStations: MutableList<Station> = mutableListOf()
+    // Holds all the nodes in an ordered queue
+    val nodes =
+      PriorityQueue<Node>(
+        compareBy<Node> { it.metric }.thenBy { it.segment.line.name }
+      )
 
-    val fromOrigin = (hashmap[origin] ?: emptyList())
-
-    for (segment in fromOrigin) {
-      val metric = calculateDistance(segment.to.geo, destination.geo) * 10 + segment.minutes.toDouble()
-      nodes.add(Node(segment, metric))
+    // Initialise all the nodes with either the metric from the origin
+    // or a large number otherwise
+    for (segment in segments) {
+      nodes.add(
+        Node(
+          segment,
+          if (segment.from == origin)
+            (if (useDistance)
+              calculateDistance(segment.to.geo, destination.geo) - calculateDistance(
+                segment.to.geo,
+                destination.geo
+              )
+            else 0.0) + segment.minutes.toDouble()
+          else
+            Double.POSITIVE_INFINITY
+        )
+      )
     }
 
+    // Keeps track of the visited stations to prevent loops
+    val visitedStations: MutableList<Station> = mutableListOf(origin)
+
+    // Get next node from queue
     var currentNode = nodes.peek()
     while (currentNode.segment.to != destination) {
-      val fromNextNode = (hashmap[currentNode.segment.to] ?: emptyList()).filter { it.from !in visitedStations }
+      // Get all the segments from the next node
+      // and filter out the visited stations
+      val fromNextNode =
+        (
+                hashmap[currentNode.segment.to]
+                  ?: emptyList()
+                ).filter { it.from !in visitedStations }
 
+      // Go over segments and update their node if the metric is lower
       for (segment in fromNextNode) {
-        val metric =
-          currentNode.metric + calculateDistance(segment.to.geo, destination.geo) + segment.minutes.toDouble()
-        val exists = nodes.find { it.segment == segment }
-        if (exists != null) {
-          if (exists.metric > metric) nodes.remove(exists)
-        } else {
-          val newNode = Node(segment, metric, currentNode)
-          nodes.add(newNode)
+        var metric =
+          currentNode.metric +
+                  (if (useDistance)
+                    calculateDistance(segment.to.geo, destination.geo) - calculateDistance(
+                      currentNode.segment.to.geo,
+                      destination.geo
+                    )
+                  else 0.0) + segment.minutes.toDouble()
+        if (segment.line != currentNode.segment.line) metric += 10
+        val segmentNode = nodes.find { it.segment == segment }
+        if (segmentNode != null && segmentNode.metric > metric) {
+          // Remove the node and add it back with the updated metric
+          // so priority queue can sort it
+          nodes.remove(segmentNode)
+          segmentNode.update(segment, metric, currentNode)
+          nodes.add(segmentNode)
         }
       }
+      // Add the current station to the visited stations
       visitedStations.add(currentNode.segment.from)
-      nodes.remove()
       if (nodes.isEmpty()) return null
+      // Remove the current node and get the next one
+      nodes.remove()
       currentNode = nodes.peek()
     }
-
+    // Return the reconstructed route
     return currentNode.route()
   }
 }
 
 fun main() {
-  val map = londonUndergroundCustom()
-
+  val map = londonUnderground()
   println("STARTING")
-  println(
-    measureTimeMillis {
-      val paths =
-        map.findShortest(
-          map.getStationByName("Whitechapel"),
-          map.getStationByName("North Acton")
-        )
-      println(paths)
-    }
-  )
+  map.getStationByName("Paddington").close()
+
+  val paths =
+    map.findShortest(
+      map.getStationByName("North Acton"),
+      map.getStationByName("Paddington"),
+      true
+    )
+  println(paths)
 }

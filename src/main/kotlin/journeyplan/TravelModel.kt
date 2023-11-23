@@ -1,7 +1,9 @@
 package journeyplan
 
+typealias geoCoordinate = Pair<Double, Double>
+
 // Add your code for modelling public transport networks in this file.
-data class Station(val name: String, val geo: Pair<Double, Double> = Pair(0.0, 0.0), var opened: Boolean = true) {
+data class Station(val name: String, val geo: geoCoordinate = Pair(0.0, 0.0), var opened: Boolean = true) {
   fun close() {
     opened = false
   }

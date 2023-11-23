@@ -84,4 +84,40 @@ class RoutePlannerTest {
       highgateToOxfordCircus.toString()
     )
   }
+
+  @Test
+  fun `toString shows multiple changes`() {
+    assertEquals(
+      """
+      Camden Town to Bond Street - 11 minutes, 2 changes
+       - Camden Town to Euston by Northern Line
+       - Euston to Oxford Circus by Victoria Line
+       - Oxford Circus to Bond Street by Central Line
+      """.trimIndent(),
+      camdenToBondStreet.toString()
+    )
+  }
+
+  @Test
+  fun `can find multiple routes between stations`() {
+    val map = SubwayMap(
+      listOf(
+        Segment(tufnellPark, archway, northernLine, 3),
+        Segment(archway, highgate, northernLine, 3),
+        Segment(highgate, archway, northernLine, 3),
+        Segment(archway, kentishTown, northernLine, 3),
+        Segment(kentishTown, camden, northernLine, 3),
+        Segment(camden, euston, northernLine, 3),
+        Segment(euston, warrenStreet, victoriaLine, 3),
+        Segment(warrenStreet, oxfordCircus, victoriaLine, 3),
+        Segment(oxfordCircus, bondStreet, centralLine, 2),
+      )
+    )
+
+    val routes = map.routesFrom(highgate, oxfordCircus)
+
+    assertEquals(1, routes.size)
+
+    assertEquals(highgateToOxfordCircus, routes[0])
+  }
 }
