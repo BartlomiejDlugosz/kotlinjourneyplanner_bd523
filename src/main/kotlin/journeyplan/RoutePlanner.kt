@@ -122,7 +122,7 @@ data class SubwayMap(private val segments: List<Segment>) {
     // Holds all the nodes in an ordered queue
     val nodes =
       PriorityQueue<Node>(
-        compareBy<Node> { it.metric }.thenBy { it.segment.line.name }
+        compareBy<Node> { it.metric }.thenBy { it.segment.line }
       )
 
     // Initialise all the nodes with either the metric from the origin
