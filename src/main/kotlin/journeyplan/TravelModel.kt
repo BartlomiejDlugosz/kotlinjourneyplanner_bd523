@@ -29,7 +29,7 @@ data class Station(
   }
 }
 
-data class Line(val name: String, var suspended: Boolean = false) {
+data class Line(val name: String, var suspended: Boolean = false) : Comparable<Line> {
   fun suspend() {
     suspended = true
   }
@@ -46,6 +46,10 @@ data class Line(val name: String, var suspended: Boolean = false) {
 
   override fun hashCode(): Int {
     return name.hashCode()
+  }
+
+  override fun compareTo(other: Line): Int {
+    return this.name.compareTo(other.name)
   }
 }
 

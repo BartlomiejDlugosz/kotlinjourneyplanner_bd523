@@ -155,7 +155,7 @@ class ExtensionsTest {
   }
 
   @Test
-  fun `A* can find shortest route with distance and closed stations2 with interchange`() {
+  fun `A* can find shortest route with distance and closed stations with interchange`() {
     val map = londonUnderground()
 
     val route = map.findShortest(map.getStationByName("North Acton"), map.getStationByName("Paddington"), useDistance = true)
