@@ -52,17 +52,17 @@ data class SubwayMap(private val segments: List<Segment>) {
       .flatten()
       .filter {
         it.segments.last().to == destination &&
-                it.segments.none { it.line.suspended } &&
-                it.segments.filterIndexed { index, segment ->
-                  // If the current line and the next line
-                  // are different
-                  // and the station in between is closed
-                  // return that item
-                  // and then check if empty for valid routes
-                  segment.line !=
-                          it.segments.getOrNull(index + 1)
-                            ?.line && !segment.to.opened
-                }.isEmpty()
+          it.segments.none { it.line.suspended } &&
+          it.segments.filterIndexed { index, segment ->
+            // If the current line and the next line
+            // are different
+            // and the station in between is closed
+            // return that item
+            // and then check if empty for valid routes
+            segment.line !=
+              it.segments.getOrNull(index + 1)
+                ?.line && !segment.to.opened
+          }.isEmpty()
       }
       .sortedBy { optimisingFor(it) }
   }
@@ -103,18 +103,24 @@ data class SubwayMap(private val segments: List<Segment>) {
       }
     }
 
-    fun costFunction(segment: Segment, destination: Station, previousSegment: Segment? = null): Double =
+    fun costFunction(
+      segment: Segment,
+      destination: Station,
+      previousSegment: Segment? = null
+    ): Double =
       when (useDistance) {
-        true -> calculateDistance(segment.to.geo, destination.geo) -
-                calculateDistance(
-                  segment.to.geo,
-                  destination.geo
-                )
+        true ->
+          calculateDistance(segment.to.geo, destination.geo) -
+            calculateDistance(
+              segment.to.geo,
+              destination.geo
+            )
         else -> 0.0
-      } + when (segment.line != previousSegment?.line) {
-        true -> 10.0
-        else -> 0.0
-      } + segment.minutes.toDouble()
+      } +
+        when (segment.line != previousSegment?.line) {
+          true -> 10.0
+          else -> 0.0
+        } + segment.minutes.toDouble()
 
     // Terminate if we've reached destination
     if (origin == destination) return null
@@ -149,9 +155,9 @@ data class SubwayMap(private val segments: List<Segment>) {
       // and filter out the visited stations
       val fromNextNode =
         (
-                hashmap[currentNode.segment.to]
-                  ?: emptyList()
-                ).filter { it.from !in visitedStations }
+          hashmap[currentNode.segment.to]
+            ?: emptyList()
+        ).filter { it.from !in visitedStations }
 
       // Go over segments and update their node if the metric is lower
       fromNextNode.forEach { segment ->
