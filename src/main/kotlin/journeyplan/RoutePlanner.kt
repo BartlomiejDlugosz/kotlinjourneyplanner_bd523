@@ -1,10 +1,10 @@
 package journeyplan
 
-import java.util.*
+import java.util.PriorityQueue
 import kotlin.collections.HashMap
 
 // Add your code for the route planner in this file.
-data class SubwayMap(private val segments: List<Segment>) {
+data class SubwayMap(val segments: List<Segment>) {
   private val hashmap: HashMap<Station, List<Segment>> = hashMapOf()
 
   init {
@@ -177,14 +177,14 @@ data class SubwayMap(private val segments: List<Segment>) {
 }
 
 fun main() {
-  val map = londonUnderground()
+  val map = londonUndergroundCustom()
   println("STARTING")
 //  map.getStationByName("Notting Hill Gate").close()
 
   val paths =
     map.findShortest(
-      map.getStationByName("North Acton"),
-      map.getStationByName("North Acton"),
+      map.getStationByName("South Kensington"),
+      map.getStationByName("Victoria"),
       true
     )
   println(paths)
