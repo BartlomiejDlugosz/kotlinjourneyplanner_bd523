@@ -109,8 +109,10 @@ data class SubwayMap(val segments: List<Segment>) {
               segment.to.geo,
               destination.geo
             )
+
         else -> 0.0
       } +
+        // Add 10 minutes if have to change line
         when (segment.line != previousSegment?.line) {
           true -> 10.0
           else -> 0.0
@@ -149,7 +151,14 @@ data class SubwayMap(val segments: List<Segment>) {
       // and filter out the visited stations
       val fromNextNode =
         (hashmap[currentNode.segment.to] ?: emptyList())
-          .filter { it.from !in visitedStations }
+          .filter {
+            it.from !in visitedStations &&
+              !it.line.suspended &&
+              (
+                (it.line != currentNode.segment.line && it.from.opened) ||
+                  it.line == currentNode.segment.line
+                )
+          }
 
       // Go over segments and update their node if the metric is lower
       fromNextNode.forEach { segment ->
@@ -181,11 +190,19 @@ fun main() {
   println("STARTING")
 //  map.getStationByName("Notting Hill Gate").close()
 
-  val paths =
-    map.findShortest(
-      map.getStationByName("South Kensington"),
-      map.getStationByName("Victoria"),
-      true
-    )
-  println(paths)
+//  val paths =
+//    map.findShortest(
+//      map.getStationByName("South Kensington"),
+//      map.getStationByName("Victoria"),
+//      true
+//    )
+//  println(paths)
+  val route = map.findShortest(map.getStationByName("North Acton"), map.getStationByName("Paddington"), true)
+  println(route)
+
+  map.getStationByName("Notting Hill Gate").close()
+
+  val route2 = map.findShortest(map.getStationByName("North Acton"), map.getStationByName("Paddington"), true)
+  println(route2)
+  map.getStationByName("Notting Hill Gate").open()
 }

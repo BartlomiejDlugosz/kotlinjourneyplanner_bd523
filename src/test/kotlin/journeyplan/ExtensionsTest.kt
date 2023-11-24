@@ -127,7 +127,7 @@ class ExtensionsTest {
   }
 
   @Test
-  fun `A* can find shortest route`() {
+  fun `A star can find shortest route`() {
 
     val route = map.findShortest(southKensington, victoria)
 
@@ -135,7 +135,7 @@ class ExtensionsTest {
   }
 
   @Test
-  fun `A* can find shortest route with distance`() {
+  fun `A star can find shortest route with distance`() {
     val route =
       customMap.findShortest(
         customMap.getStationByName("South Kensington"),
@@ -148,7 +148,7 @@ class ExtensionsTest {
   }
 
   @Test
-  fun `A* can find shortest route with distance and closed stations without interchange`() {
+  fun `A star can find shortest route with distance and closed stations without interchange`() {
     val route =
       customMap.findShortest(
         customMap.getStationByName("South Kensington"),
@@ -170,16 +170,26 @@ class ExtensionsTest {
   }
 
   @Test
-  fun `A* can find shortest route with distance and closed stations with interchange`() {
-    val route = customMap.findShortest(customMap.getStationByName("North Acton"), customMap.getStationByName("Paddington"), true)
+  fun `A star can find shortest route with distance and closed stations with interchange`() {
+    val route =
+      customMap.findShortest(
+        customMap.getStationByName("North Acton"),
+        customMap.getStationByName("Paddington"),
+        true
+      )
     println(route)
     assertEquals(13, route.duration())
     assertEquals(1, route.numChanges())
 
     customMap.getStationByName("Notting Hill Gate").close()
 
-    val route2 = customMap.findShortest(customMap.getStationByName("North Acton"), customMap.getStationByName("Paddington"), true)
-    assertEquals(21, route2.duration())
+    val route2 =
+      customMap.findShortest(
+        customMap.getStationByName("North Acton"),
+        customMap.getStationByName("Paddington"),
+        true
+      )
+    assertEquals(19, route2.duration())
     assertEquals(1, route2.numChanges())
     customMap.getStationByName("Notting Hill Gate").open()
   }
