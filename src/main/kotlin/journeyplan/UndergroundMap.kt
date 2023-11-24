@@ -124,7 +124,7 @@ fun calculateTime(
 ): Int = max((calculateDistance(geo1, geo2) / 0.5498592).roundToInt(), 1)
 
 // Creates the map of the london underground
-fun londonUnderground(): SubwayMap {
+fun londonUndergroundCustom(): SubwayMap {
   val segments: MutableList<Segment> = mutableListOf()
 
   // Uses multithreading to speed up the process

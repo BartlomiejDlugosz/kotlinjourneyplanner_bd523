@@ -38,6 +38,7 @@ class ExtensionsTest {
     )
 
   val map = londonUnderground()
+  val customMap = londonUndergroundCustom()
 
   @Test
   fun `can find multiple routes between stations`() {
@@ -130,43 +131,57 @@ class ExtensionsTest {
 
     val route = map.findShortest(southKensington, victoria)
 
-    assertEquals(12, route?.duration())
+    assertEquals(12, route.duration())
   }
 
   @Test
   fun `A* can find shortest route with distance`() {
-    val map = londonUnderground()
-    val route = map.findShortest(map.getStationByName("South Kensington"), map.getStationByName("Victoria"), useDistance = true)
+    val route =
+      customMap.findShortest(
+        customMap.getStationByName("South Kensington"),
+        customMap.getStationByName("Victoria"),
+        true
+      )
 
-    assertEquals(12, route?.duration())
-    assertEquals(2, route?.segments?.size)
+    assertEquals(4, route.duration())
+    assertEquals(2, route.segments.size)
   }
 
   @Test
   fun `A* can find shortest route with distance and closed stations without interchange`() {
-    val map = londonUnderground()
-    val route = map.findShortest(map.getStationByName("South Kensington"), map.getStationByName("Victoria"), useDistance = true)
-    assertEquals(12, route?.duration())
-    assertEquals(2, route?.segments?.size)
-    map.getStationByName("Sloane Square").close()
-    val route2 = map.findShortest(map.getStationByName("South Kensington"), map.getStationByName("Victoria"), useDistance = true)
-    assertEquals(12, route2?.duration())
-    assertEquals(2, route2?.segments?.size)
+    val route =
+      customMap.findShortest(
+        customMap.getStationByName("South Kensington"),
+        customMap.getStationByName("Victoria"),
+        true
+      )
+    assertEquals(4, route.duration())
+    assertEquals(2, route.segments.size)
+    customMap.getStationByName("Sloane Square").close()
+    val route2 =
+      customMap.findShortest(
+        customMap.getStationByName("South Kensington"),
+        customMap.getStationByName("Victoria"),
+        true
+      )
+    assertEquals(4, route2.duration())
+    assertEquals(2, route2.segments.size)
+    customMap.getStationByName("Sloane Square").open()
   }
 
   @Test
   fun `A* can find shortest route with distance and closed stations with interchange`() {
-    val map = londonUnderground()
+    val route = customMap.findShortest(customMap.getStationByName("North Acton"), customMap.getStationByName("Paddington"), true)
+    println(route)
+    assertEquals(13, route.duration())
+    assertEquals(1, route.numChanges())
 
-    val route = map.findShortest(map.getStationByName("North Acton"), map.getStationByName("Paddington"), useDistance = true)
-    assertEquals(13, route?.duration())
-    assertEquals(1, route?.numChanges())
+    customMap.getStationByName("Notting Hill Gate").close()
 
-    map.getStationByName("Notting Hill Gate").close()
-
-    val route2 = map.findShortest(map.getStationByName("North Acton"), map.getStationByName("Paddington"), useDistance = true)
-    assertEquals(12, route2?.duration())
-    assertEquals(1, route2?.numChanges())
+    val route2 = customMap.findShortest(customMap.getStationByName("North Acton"), customMap.getStationByName("Paddington"), true)
+    assertEquals(21, route2.duration())
+    assertEquals(1, route2.numChanges())
+    customMap.getStationByName("Notting Hill Gate").open()
   }
 
   private fun assertGoesVia(

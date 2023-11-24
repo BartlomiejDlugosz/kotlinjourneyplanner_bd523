@@ -84,7 +84,6 @@ data class Route(val segments: List<Segment>) {
         "${segments.first().from} to ${segments.last().to} " +
           "- ${this.duration()} minutes, ${this.numChanges()} changes\n"
       )
-    var currentLine: Line = segments.first().line
     str.append(" - ${segments.first().from}")
     // find all places where two adjacent stations have different routes
     // and adds them to the string
