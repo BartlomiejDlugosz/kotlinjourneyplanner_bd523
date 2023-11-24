@@ -126,6 +126,7 @@ fun calculateTime(
 // Creates the map of the london underground
 fun londonUndergroundCustom(): SubwayMap {
   val segments: MutableList<Segment> = mutableListOf()
+  val stations = hashMapOf<String, Station>()
 
   // Uses multithreading to speed up the process
   val threads: MutableList<Thread> = mutableListOf()
@@ -136,22 +137,29 @@ fun londonUndergroundCustom(): SubwayMap {
       thread {
         val listOfRoutes = getStations(line)
         val stationNames = getStationNames(line)
+        val currentLine = Line(line.capitalize())
 
         for (route in listOfRoutes) {
           val tempSegment: MutableList<Segment> = mutableListOf()
           for (i in 0..<(route.size - 1)) {
+            val station1: Station =
+              stations[route[i].first] ?: Station(
+                lookUpStationCode(route[i].first, stationNames),
+                route[i].second
+              )
+            stations[route[i].first] = station1
+            val station2: Station =
+              stations[route[i + 1].first] ?: Station(
+                lookUpStationCode(route[i + 1].first, stationNames),
+                route[i + 1].second
+              )
+            stations[route[i + 1].first] = station2
             tempSegment.add(
               Segment(
                 // Looks up the station code to get the station name
-                Station(
-                  lookUpStationCode(route[i].first, stationNames),
-                  route[i].second
-                ),
-                Station(
-                  lookUpStationCode(route[i + 1].first, stationNames),
-                  route[i + 1].second
-                ),
-                Line(line.capitalize()),
+                station1,
+                station2,
+                currentLine,
                 calculateTime(route[i].second, route[i + 1].second)
               )
             )
